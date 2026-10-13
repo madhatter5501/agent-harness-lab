@@ -1,0 +1,44 @@
+name: agent-harness-lab
+x-common: &common
+  build: .
+  image: agent-harness-lab:local
+  init: true
+  environment: &environment
+    DATA_DIR: /data
+    DEMO_JWT_SECRET: ${DEMO_JWT_SECRET:-local-lab-only-change-before-sharing-123456789}
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+services:
+  harness:
+    <<: *common
+    ports: ["127.0.0.1:8765:8000"]
+    environment:
+      <<: *environment
+      ORDERS_URL: http://orders:8000
+      DOCUMENTS_URL: http://documents:8000
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-http://host.docker.internal:1234/v1}
+      MODEL_NAME: ${MODEL_NAME:-hermes-3-llama-3.1-8b}
+      MODEL_PROTOCOL: ${MODEL_PROTOCOL:-chat}
+      DECISION_FORMAT: ${DECISION_FORMAT:-json}
+      UTILITY_MODEL_NAME: ${UTILITY_MODEL_NAME:-hermes-3-llama-3.1-8b}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["harness-data:/data"]
+    depends_on:
+      orders: {condition: service_healthy}
+      documents: {condition: service_healthy}
+  orders:
+    <<: *common
+    command: [uvicorn, lab.orders:app, --host, 0.0.0.0, --port, "8000"]
+    ports: ["127.0.0.1:8766:8000"]
+    volumes: ["orders-data:/data"]
+  documents:
+    <<: *common
+    command: [uvicorn, lab.documents:app, --host, 0.0.0.0, --port, "8000"]
+    ports: ["127.0.0.1:8767:8000"]
+volumes:
+  harness-data:
+  orders-data:

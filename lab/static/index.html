@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Harness Lab · Follow the decision</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <div class="eyebrow">Local systems / transparent execution</div>
+          <h1>Harness Lab</h1>
+          <p class="muted">Follow a request from intent to evidence.</p>
+        </div>
+        <span class="badge">Local demo · no automatic cloud fallback</span>
+      </header>
+      <div class="layout">
+        <aside>
+          <section class="panel">
+            <h2>Conversation settings</h2>
+            <label for="identity">Demo identity</label
+            ><select id="identity">
+              <option value="alice">Alice · Acme · read + write</option>
+              <option value="viewer">Viewer · Acme · read only</option>
+              <option value="bob">Bob · Beta · read + write</option>
+            </select>
+            <label for="mode">Model</label
+            ><select id="mode">
+              <option value="lmstudio">LM Studio · local model</option>
+              <option value="mock">
+                Mock · scripted, zero model tokens
+              </option></select
+            ><small id="modelname"></small>
+            <label for="discovery">Tool loading</label
+            ><select id="discovery">
+              <option value="lazy">Lazy · discover only what is needed</option>
+              <option value="eager">
+                Eager · expose every authorized tool
+              </option>
+            </select>
+            <label class="check"
+              ><input type="checkbox" id="utility" />Add optional utility
+              classification</label
+            >
+          </section>
+          <section class="panel">
+            <h2>The same API, directly</h2>
+            <p class="muted">
+              Read an order with your current identity. No model or tool
+              discovery.
+            </p>
+            <label for="directid">Order ID</label
+            ><input id="directid" value="O-100" />
+            <div class="actions">
+              <button id="direct">Read API directly</button>
+            </div>
+            <pre id="directresult"></pre>
+          </section>
+          <section class="panel">
+            <h2>Recent runs</h2>
+            <div id="recent"></div>
+          </section>
+        </aside>
+        <article>
+          <section class="panel chatbox">
+            <div class="split">
+              <h2>Conversation</h2>
+              <button id="newchat">New conversation</button>
+            </div>
+            <p id="chatstatus" class="muted">
+              Tell me what you need. I can ask questions when details are
+              missing.
+            </p>
+            <div
+              id="chatlog"
+              class="chatlog"
+              role="log"
+              aria-live="polite"
+            ></div>
+            <label for="prompt">Your message</label
+            ><textarea id="prompt">What is the status of order O-100?</textarea>
+            <div class="chips">
+              <button data-prompt="What is the status of order O-100?">
+                Order status</button
+              ><button
+                data-prompt="Cancel order O-100 because it was a duplicate purchase."
+              >
+                Cancel order</button
+              ><button data-prompt="What is the warranty policy?">
+                Warranty</button
+              ><button data-prompt="What is the status of order O-200?">
+                Tenant boundary
+              </button>
+            </div>
+            <label class="check"
+              ><input type="checkbox" id="followup" />Continue the selected
+              conversation</label
+            >
+            <div class="actions">
+              <button id="run" class="primary">Send message →</button>
+            </div>
+            <p id="notice" role="status" class="muted"></p>
+            <small
+              >Enter to send · Shift+Enter for a new line. Write actions still
+              require separate approval.</small
+            >
+          </section>
+          <div class="flow">
+            <span class="node" data-node="guard">1 · Guard</span
+            ><span class="arrow">→</span
+            ><span class="node" data-node="model">2 · Model</span
+            ><span class="arrow">⇄</span
+            ><span class="node" data-node="discovery">3 · Discover</span
+            ><span class="arrow">→</span
+            ><span class="node" data-node="http">4 · API</span
+            ><span class="arrow">→</span
+            ><span class="node" data-node="complete">5 · Response</span>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <strong id="calls">—</strong
+              ><small>Model calls, including utilities</small>
+            </div>
+            <div class="stat">
+              <strong id="tokens">—</strong
+              ><small>Reported input + output tokens</small>
+            </div>
+            <div class="stat">
+              <strong id="loaded">—</strong><small>Loaded API tools</small>
+            </div>
+            <div class="stat">
+              <strong id="state">Ready</strong><small>Run status</small>
+            </div>
+          </div>
+          <section class="panel approval" id="approval" hidden>
+            <h2>Review this exact action</h2>
+            <pre id="pending"></pre>
+            <div class="actions">
+              <button id="approve" class="primary">Approve and execute</button
+              ><button id="decline">Decline</button>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="split">
+              <h2>Execution trace</h2>
+              <a href="/source/loop" target="_blank" rel="noopener"
+                >Read the Python loop ↗</a
+              ><button id="export" disabled>Download audit JSON</button>
+            </div>
+            <p class="muted">
+              Select a step to inspect its actual inputs and outputs. Model
+              prompts are visible; credentials are omitted.
+            </p>
+            <p class="muted">Audit reference: <span id="runref">None</span></p>
+            <div class="inspect">
+              <div class="timeline" id="timeline">
+                <div class="empty">Your execution will appear here.</div>
+              </div>
+              <div class="detail">
+                <h2 id="stepname">Inside the loop</h2>
+                <pre id="detail">
+The model chooses tools.
+The harness checks and routes them.
+The API owns the business rules.
+
+Lazy discovery adds a model continuation,
+but keeps unused tool definitions out of the prompt.
+
+No hidden chain of thought is requested or displayed.</pre
+                >
+              </div>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Response</h2>
+            <div class="answer" id="answer">
+              Run a request to see its answer and evidence.
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Working memory ≠ audit history</h2>
+            <p class="muted">
+              Follow-ups keep recent turns. Older turns are summarized after 6
+              KB. Original run records stay in SQLite, linked by previous_run.
+              Summaries never grant permission.
+            </p>
+            <pre id="memory">No summary yet.</pre>
+            <details>
+              <summary>What this demo guarantees—and what it does not</summary>
+              <p class="muted">
+                API authorization, schema validation, execution limits, and
+                write approval are enforced by code. Supported order and policy
+                answers are rendered from checked API fields. General
+                conversation is not independently fact-checked. The identity
+                selector is a local demonstration, not production login. Audit
+                records contain request data; they omit credentials and are not
+                tamper-proof. Byte sizes are measurements, not token estimates.
+                Mock mode is a scripted fixture.
+              </p>
+            </details>
+          </section>
+        </article>
+      </div>
+      <p class="footer">
+        Harness Lab · Python + FastAPI + HTTPX + SQLite · Three services, one
+        canonical implementation per capability.
+      </p>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
